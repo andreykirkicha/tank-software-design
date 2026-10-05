@@ -1,6 +1,6 @@
 package ru.mipt.bit.platformer.model;
 
-public class Tree {
+public class Tree implements Obstacle {
     private final int x;
     private final int y;
 
