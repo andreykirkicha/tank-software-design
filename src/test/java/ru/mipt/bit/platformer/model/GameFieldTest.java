@@ -39,4 +39,26 @@ public class GameFieldTest {
         assertEquals(0, tank.getX());
         assertEquals(0, tank.getY());
     }
+
+    @Test
+    public void doesNotMoveTankThroughAnyObstacleImplementation() {
+        Tank tank = new Tank(0, 0, Direction.RIGHT);
+        Obstacle obstacle = new Obstacle() {
+            @Override
+            public int getX() {
+                return 1;
+            }
+
+            @Override
+            public int getY() {
+                return 0;
+            }
+        };
+        GameField field = new GameField(3, 3, tank, new Obstacle[]{obstacle});
+
+        field.moveTank(Direction.RIGHT);
+
+        assertEquals(0, tank.getX());
+        assertEquals(0, tank.getY());
+    }
 }

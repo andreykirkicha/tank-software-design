@@ -1,6 +1,6 @@
 package ru.mipt.bit.platformer.model;
 
-public class Tank {
+public class Tank implements Movable {
     private int x;
     private int y;
     private Direction direction;

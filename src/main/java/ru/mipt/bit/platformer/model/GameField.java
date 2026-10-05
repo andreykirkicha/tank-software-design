@@ -3,14 +3,14 @@ package ru.mipt.bit.platformer.model;
 public class GameField {
     private final int width;
     private final int height;
-    private final Tank tank;
-    private final Tree[] trees;
+    private final Movable tank;
+    private final Obstacle[] obstacles;
 
-    public GameField(int width, int height, Tank tank, Tree[] trees) {
+    public GameField(int width, int height, Movable tank, Obstacle[] obstacles) {
         this.width = width;
         this.height = height;
         this.tank = tank;
-        this.trees = trees;
+        this.obstacles = obstacles;
     }
 
     public int getWidth() {
@@ -21,12 +21,12 @@ public class GameField {
         return height;
     }
 
-    public Tank getTank() {
+    public Movable getTank() {
         return tank;
     }
 
-    public Tree[] getTrees() {
-        return trees;
+    public Obstacle[] getObstacles() {
+        return obstacles;
     }
 
     public void moveTank(Direction direction) {
@@ -41,16 +41,16 @@ public class GameField {
         int nextX = tank.getNextX();
         int nextY = tank.getNextY();
 
-        return isInsideField(nextX, nextY) && !hasTreeAt(nextX, nextY);
+        return isInsideField(nextX, nextY) && !hasObstacleAt(nextX, nextY);
     }
 
     private boolean isInsideField(int x, int y) {
         return x >= 0 && x < width && y >= 0 && y < height;
     }
 
-    private boolean hasTreeAt(int x, int y) {
-        for (Tree tree : trees) {
-            if (tree.getX() == x && tree.getY() == y) {
+    private boolean hasObstacleAt(int x, int y) {
+        for (Obstacle obstacle : obstacles) {
+            if (obstacle.getX() == x && obstacle.getY() == y) {
                 return true;
             }
         }

@@ -15,13 +15,22 @@ import ru.mipt.bit.platformer.graphics.TreeGraphics;
 import ru.mipt.bit.platformer.input.InputHandler;
 import ru.mipt.bit.platformer.model.Direction;
 import ru.mipt.bit.platformer.model.GameField;
+import ru.mipt.bit.platformer.model.Movable;
 import ru.mipt.bit.platformer.model.Tank;
 import ru.mipt.bit.platformer.model.Tree;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import static com.badlogic.gdx.Input.Keys.*;
 import static com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
 public class GameDesktopLauncher implements ApplicationListener {
+
+    private static final String TANK_TEXTURE_PATH = "images/tank_blue.png";
+    private static final String TREE_TEXTURE_PATH = "images/greenTree.png";
+    private static final float TANK_MOVEMENT_SPEED = 0.4f;
 
     private Batch batch;
 
@@ -40,7 +49,7 @@ public class GameDesktopLauncher implements ApplicationListener {
         level = new TmxMapLoader().load("level.tmx");
         levelRenderer = createSingleLayerMapRenderer(level, batch);
         TiledMapTileLayer groundLayer = getSingleLayer(level);
-        inputHandler = new InputHandler(Gdx.input::isKeyPressed);
+        inputHandler = new InputHandler(Gdx.input::isKeyPressed, createControls());
 
         Tank tank = new Tank(1, 1, Direction.RIGHT);
         Tree[] trees = {
@@ -49,10 +58,10 @@ public class GameDesktopLauncher implements ApplicationListener {
         };
         gameField = new GameField(10, 8, tank, trees);
 
-        tankGraphics = new TankGraphics(groundLayer, tank);
+        tankGraphics = new TankGraphics(groundLayer, tank, TANK_TEXTURE_PATH, TANK_MOVEMENT_SPEED);
         treesGraphics = new TreeGraphics[trees.length];
         for (int i = 0; i < trees.length; i++) {
-            treesGraphics[i] = new TreeGraphics(groundLayer, trees[i]);
+            treesGraphics[i] = new TreeGraphics(groundLayer, trees[i], TREE_TEXTURE_PATH);
         }
     }
 
@@ -82,10 +91,23 @@ public class GameDesktopLauncher implements ApplicationListener {
             return;
         }
 
-        Tank tank = gameField.getTank();
+        Movable tank = gameField.getTank();
 
         gameField.moveTank(direction);
         tankGraphics.moveTank(tank);
+    }
+
+    private Map<Integer, Direction> createControls() {
+        Map<Integer, Direction> controls = new LinkedHashMap<>();
+        controls.put(UP, Direction.UP);
+        controls.put(W, Direction.UP);
+        controls.put(LEFT, Direction.LEFT);
+        controls.put(A, Direction.LEFT);
+        controls.put(DOWN, Direction.DOWN);
+        controls.put(S, Direction.DOWN);
+        controls.put(RIGHT, Direction.RIGHT);
+        controls.put(D, Direction.RIGHT);
+        return controls;
     }
 
     private void renderGame() {

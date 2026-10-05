@@ -2,29 +2,24 @@ package ru.mipt.bit.platformer.input;
 
 import ru.mipt.bit.platformer.model.Direction;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.IntPredicate;
-
-import static com.badlogic.gdx.Input.Keys.*;
 
 public class InputHandler {
     private final IntPredicate isKeyPressed;
+    private final Map<Integer, Direction> controls;
 
-    public InputHandler(IntPredicate isKeyPressed) {
+    public InputHandler(IntPredicate isKeyPressed, Map<Integer, Direction> controls) {
         this.isKeyPressed = isKeyPressed;
+        this.controls = new LinkedHashMap<>(controls);
     }
 
     public Direction getPressedDirection() {
-        if (isKeyPressed.test(UP) || isKeyPressed.test(W)) {
-            return Direction.UP;
-        }
-        if (isKeyPressed.test(LEFT) || isKeyPressed.test(A)) {
-            return Direction.LEFT;
-        }
-        if (isKeyPressed.test(DOWN) || isKeyPressed.test(S)) {
-            return Direction.DOWN;
-        }
-        if (isKeyPressed.test(RIGHT) || isKeyPressed.test(D)) {
-            return Direction.RIGHT;
+        for (Map.Entry<Integer, Direction> control : controls.entrySet()) {
+            if (isKeyPressed.test(control.getKey())) {
+                return control.getValue();
+            }
         }
         return null;
     }
