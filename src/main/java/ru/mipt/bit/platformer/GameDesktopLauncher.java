@@ -13,12 +13,17 @@ import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import ru.mipt.bit.platformer.graphics.TankGraphics;
 import ru.mipt.bit.platformer.graphics.TreeGraphics;
 import ru.mipt.bit.platformer.input.InputHandler;
+import ru.mipt.bit.platformer.level.FileGameFieldLoader;
+import ru.mipt.bit.platformer.level.GameFieldLoader;
+import ru.mipt.bit.platformer.level.RandomGameFieldGenerator;
 import ru.mipt.bit.platformer.model.Direction;
 import ru.mipt.bit.platformer.model.GameField;
 import ru.mipt.bit.platformer.model.Movable;
-import ru.mipt.bit.platformer.model.Tank;
-import ru.mipt.bit.platformer.model.Tree;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -31,6 +36,11 @@ public class GameDesktopLauncher implements ApplicationListener {
     private static final String TANK_TEXTURE_PATH = "images/tank_blue.png";
     private static final String TREE_TEXTURE_PATH = "images/greenTree.png";
     private static final float TANK_MOVEMENT_SPEED = 0.4f;
+    private static final int LEVEL_WIDTH = 10;
+    private static final int LEVEL_HEIGHT = 8;
+    private static final int RANDOM_TREE_COUNT = 12;
+
+    private final boolean randomLevel;
 
     private Batch batch;
 
@@ -42,6 +52,14 @@ public class GameDesktopLauncher implements ApplicationListener {
 
     private GameField gameField;
 
+    public GameDesktopLauncher() {
+        this(false);
+    }
+
+    public GameDesktopLauncher(boolean randomLevel) {
+        this.randomLevel = randomLevel;
+    }
+
     @Override
     public void create() {
         batch = new SpriteBatch();
@@ -51,17 +69,31 @@ public class GameDesktopLauncher implements ApplicationListener {
         TiledMapTileLayer groundLayer = getSingleLayer(level);
         inputHandler = new InputHandler(Gdx.input::isKeyPressed, createControls());
 
-        Tank tank = new Tank(1, 1, Direction.RIGHT);
-        Tree[] trees = {
-                new Tree(1, 3),
-                new Tree(7, 5)
-        };
-        gameField = new GameField(10, 8, tank, trees);
+        gameField = loadGameField();
 
-        tankGraphics = new TankGraphics(groundLayer, tank, TANK_TEXTURE_PATH, TANK_MOVEMENT_SPEED);
-        treesGraphics = new TreeGraphics[trees.length];
-        for (int i = 0; i < trees.length; i++) {
-            treesGraphics[i] = new TreeGraphics(groundLayer, trees[i], TREE_TEXTURE_PATH);
+        tankGraphics = new TankGraphics(groundLayer, gameField.getTank(), TANK_TEXTURE_PATH, TANK_MOVEMENT_SPEED);
+        treesGraphics = new TreeGraphics[gameField.getObstacles().length];
+        for (int i = 0; i < gameField.getObstacles().length; i++) {
+            treesGraphics[i] = new TreeGraphics(groundLayer, gameField.getObstacles()[i], TREE_TEXTURE_PATH);
+        }
+    }
+
+    private GameField loadGameField() {
+        GameFieldLoader loader;
+        if (randomLevel) {
+            loader = new RandomGameFieldGenerator(LEVEL_WIDTH, LEVEL_HEIGHT, RANDOM_TREE_COUNT);
+        } else {
+            InputStream levelStream = GameDesktopLauncher.class.getClassLoader().getResourceAsStream("level.txt");
+            if (levelStream == null) {
+                throw new IllegalStateException("Level resource not found: level.txt");
+            }
+            loader = new FileGameFieldLoader(new InputStreamReader(levelStream, StandardCharsets.UTF_8));
+        }
+
+        try {
+            return loader.load();
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot load game level", e);
         }
     }
 
@@ -153,6 +185,7 @@ public class GameDesktopLauncher implements ApplicationListener {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
         // level width: 10 tiles x 128px, height: 8 tiles x 128px
         config.setWindowedMode(1280, 1024);
-        new Lwjgl3Application(new GameDesktopLauncher(), config);
+        boolean randomLevel = args.length > 0 && "--random".equals(args[0]);
+        new Lwjgl3Application(new GameDesktopLauncher(randomLevel), config);
     }
 }
