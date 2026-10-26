@@ -50,13 +50,13 @@ public class TankGraphics {
     }
 
     public void update(float deltaTime) {
+        movementProgress = continueProgress(movementProgress, deltaTime, movementSpeed);
         tileMovement.moveRectangleBetweenTileCenters(
                 rectangle,
                 previousCoordinates,
                 destinationCoordinates,
                 movementProgress
         );
-        movementProgress = continueProgress(movementProgress, deltaTime, movementSpeed);
     }
 
     public void draw(Batch batch, Movable tank) {
