@@ -4,145 +4,174 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.maps.MapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
-import com.badlogic.gdx.math.GridPoint2;
-import com.badlogic.gdx.math.Interpolation;
-import com.badlogic.gdx.math.Rectangle;
-import ru.mipt.bit.platformer.util.TileMovement;
+import ru.mipt.bit.platformer.control.ControlStrategy;
+import ru.mipt.bit.platformer.control.KeyboardControlStrategy;
+import ru.mipt.bit.platformer.control.RandomControlStrategy;
+import ru.mipt.bit.platformer.control.TankController;
+import ru.mipt.bit.platformer.graphics.TankGraphics;
+import ru.mipt.bit.platformer.graphics.TreeGraphics;
+import ru.mipt.bit.platformer.input.InputHandler;
+import ru.mipt.bit.platformer.level.FileGameFieldLoader;
+import ru.mipt.bit.platformer.level.GameFieldLoader;
+import ru.mipt.bit.platformer.level.RandomGameFieldGenerator;
+import ru.mipt.bit.platformer.level.RandomTankGenerator;
+import ru.mipt.bit.platformer.model.Direction;
+import ru.mipt.bit.platformer.model.GameField;
+import ru.mipt.bit.platformer.model.Movable;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static com.badlogic.gdx.Input.Keys.*;
 import static com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT;
-import static com.badlogic.gdx.math.MathUtils.isEqual;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
 public class GameDesktopLauncher implements ApplicationListener {
 
-    private static final float MOVEMENT_SPEED = 0.4f;
+    private static final String PLAYER_TANK_TEXTURE_PATH = "images/tank_blue.png";
+    private static final String AI_TANK_TEXTURE_PATH = "images/tank_orange.png";
+    private static final String TREE_TEXTURE_PATH = "images/greenTree.png";
+    private static final float TANK_MOVEMENT_SPEED = 0.4f;
+    private static final int LEVEL_WIDTH = 10;
+    private static final int LEVEL_HEIGHT = 8;
+    private static final int RANDOM_TREE_COUNT = 12;
+    private static final int AI_TANK_COUNT = 4;
+
+    private final boolean randomLevel;
 
     private Batch batch;
 
     private TiledMap level;
     private MapRenderer levelRenderer;
-    private TileMovement tileMovement;
+    private TankGraphics[] tanksGraphics;
+    private TankController[] tankControllers;
+    private TreeGraphics[] treesGraphics;
 
-    private Texture blueTankTexture;
-    private TextureRegion playerGraphics;
-    private Rectangle playerRectangle;
-    // player current position coordinates on level 10x8 grid (e.g. x=0, y=1)
-    private GridPoint2 playerCoordinates;
-    // which tile the player want to go next
-    private GridPoint2 playerDestinationCoordinates;
-    private float playerMovementProgress = 1f;
-    private float playerRotation;
+    private GameField gameField;
 
-    private Texture greenTreeTexture;
-    private TextureRegion treeObstacleGraphics;
-    private GridPoint2 treeObstacleCoordinates = new GridPoint2();
-    private Rectangle treeObstacleRectangle = new Rectangle();
+    public GameDesktopLauncher() {
+        this(false);
+    }
+
+    public GameDesktopLauncher(boolean randomLevel) {
+        this.randomLevel = randomLevel;
+    }
 
     @Override
     public void create() {
         batch = new SpriteBatch();
 
-        // load level tiles
         level = new TmxMapLoader().load("level.tmx");
         levelRenderer = createSingleLayerMapRenderer(level, batch);
         TiledMapTileLayer groundLayer = getSingleLayer(level);
-        tileMovement = new TileMovement(groundLayer, Interpolation.smooth);
+        InputHandler inputHandler = new InputHandler(Gdx.input::isKeyPressed, createControls());
 
-        // Texture decodes an image file and loads it into GPU memory, it represents a native resource
-        blueTankTexture = new Texture("images/tank_blue.png");
-        // TextureRegion represents Texture portion, there may be many TextureRegion instances of the same Texture
-        playerGraphics = new TextureRegion(blueTankTexture);
-        playerRectangle = createBoundingRectangle(playerGraphics);
-        // set player initial position
-        playerDestinationCoordinates = new GridPoint2(1, 1);
-        playerCoordinates = new GridPoint2(playerDestinationCoordinates);
-        playerRotation = 0f;
+        gameField = loadGameField();
+        new RandomTankGenerator().generate(gameField, AI_TANK_COUNT);
 
-        greenTreeTexture = new Texture("images/greenTree.png");
-        treeObstacleGraphics = new TextureRegion(greenTreeTexture);
-        treeObstacleCoordinates = new GridPoint2(1, 3);
-        treeObstacleRectangle = createBoundingRectangle(treeObstacleGraphics);
-        moveRectangleAtTileCenter(groundLayer, treeObstacleRectangle, treeObstacleCoordinates);
+        tanksGraphics = new TankGraphics[gameField.getTanks().size()];
+        tankControllers = new TankController[tanksGraphics.length];
+        for (int i = 0; i < tanksGraphics.length; i++) {
+            Movable tank = gameField.getTanks().get(i);
+            boolean playerControlled = tank == gameField.getTank();
+            String texturePath = playerControlled ? PLAYER_TANK_TEXTURE_PATH : AI_TANK_TEXTURE_PATH;
+            tanksGraphics[i] = new TankGraphics(groundLayer, tank, texturePath, TANK_MOVEMENT_SPEED);
+            ControlStrategy strategy = playerControlled
+                    ? new KeyboardControlStrategy(inputHandler) : new RandomControlStrategy();
+            tankControllers[i] = new TankController(gameField, tank, strategy);
+        }
+        treesGraphics = new TreeGraphics[gameField.getObstacles().length];
+        for (int i = 0; i < gameField.getObstacles().length; i++) {
+            treesGraphics[i] = new TreeGraphics(groundLayer, gameField.getObstacles()[i], TREE_TEXTURE_PATH);
+        }
+    }
+
+    private GameField loadGameField() {
+        GameFieldLoader loader;
+        if (randomLevel) {
+            loader = new RandomGameFieldGenerator(LEVEL_WIDTH, LEVEL_HEIGHT, RANDOM_TREE_COUNT);
+        } else {
+            InputStream levelStream = GameDesktopLauncher.class.getClassLoader().getResourceAsStream("level.txt");
+            if (levelStream == null) {
+                throw new IllegalStateException("Level resource not found: level.txt");
+            }
+            loader = new FileGameFieldLoader(new InputStreamReader(levelStream, StandardCharsets.UTF_8));
+        }
+
+        try {
+            return loader.load();
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot load game level", e);
+        }
     }
 
     @Override
     public void render() {
-        // clear the screen
-        Gdx.gl.glClearColor(0f, 0f, 0.2f, 1f);
-        Gdx.gl.glClear(GL_COLOR_BUFFER_BIT);
+        clearScreen();
 
-        // get time passed since the last render
         float deltaTime = Gdx.graphics.getDeltaTime();
 
-        if (Gdx.input.isKeyPressed(UP) || Gdx.input.isKeyPressed(W)) {
-            if (isEqual(playerMovementProgress, 1f)) {
-                // check potential player destination for collision with obstacles
-                if (!treeObstacleCoordinates.equals(incrementedY(playerCoordinates))) {
-                    playerDestinationCoordinates.y++;
-                    playerMovementProgress = 0f;
-                }
-                playerRotation = 90f;
-            }
-        }
-        if (Gdx.input.isKeyPressed(LEFT) || Gdx.input.isKeyPressed(A)) {
-            if (isEqual(playerMovementProgress, 1f)) {
-                if (!treeObstacleCoordinates.equals(decrementedX(playerCoordinates))) {
-                    playerDestinationCoordinates.x--;
-                    playerMovementProgress = 0f;
-                }
-                playerRotation = -180f;
-            }
-        }
-        if (Gdx.input.isKeyPressed(DOWN) || Gdx.input.isKeyPressed(S)) {
-            if (isEqual(playerMovementProgress, 1f)) {
-                if (!treeObstacleCoordinates.equals(decrementedY(playerCoordinates))) {
-                    playerDestinationCoordinates.y--;
-                    playerMovementProgress = 0f;
-                }
-                playerRotation = -90f;
-            }
-        }
-        if (Gdx.input.isKeyPressed(RIGHT) || Gdx.input.isKeyPressed(D)) {
-            if (isEqual(playerMovementProgress, 1f)) {
-                if (!treeObstacleCoordinates.equals(incrementedX(playerCoordinates))) {
-                    playerDestinationCoordinates.x++;
-                    playerMovementProgress = 0f;
-                }
-                playerRotation = 0f;
-            }
-        }
+        updateGame(deltaTime);
+        renderGame();
+    }
 
-        // calculate interpolated player screen coordinates
-        tileMovement.moveRectangleBetweenTileCenters(playerRectangle, playerCoordinates, playerDestinationCoordinates, playerMovementProgress);
+    private void clearScreen() {
+        Gdx.gl.glClearColor(0f, 0f, 0.2f, 1f);
+        Gdx.gl.glClear(GL_COLOR_BUFFER_BIT);
+    }
 
-        playerMovementProgress = continueProgress(playerMovementProgress, deltaTime, MOVEMENT_SPEED);
-        if (isEqual(playerMovementProgress, 1f)) {
-            // record that the player has reached his/her destination
-            playerCoordinates.set(playerDestinationCoordinates);
+    private void updateGame(float deltaTime) {
+        for (int i = 0; i < tanksGraphics.length; i++) {
+            tanksGraphics[i].update(deltaTime);
+            Movable tank = gameField.getTanks().get(i);
+            if (gameField.isTankMoving(tank) && !tanksGraphics[i].isMoving()) {
+                gameField.finishTankMove(tank);
+            }
         }
+        for (int i = 0; i < tankControllers.length; i++) {
+            tankControllers[i].update();
+            Movable tank = gameField.getTanks().get(i);
+            if (gameField.isTankMoving(tank) && !tanksGraphics[i].isMoving()) {
+                tanksGraphics[i].moveTank(tank);
+            }
+        }
+    }
 
-        // render each tile of the level
+    private Map<Integer, Direction> createControls() {
+        Map<Integer, Direction> controls = new LinkedHashMap<>();
+        controls.put(UP, Direction.UP);
+        controls.put(W, Direction.UP);
+        controls.put(LEFT, Direction.LEFT);
+        controls.put(A, Direction.LEFT);
+        controls.put(DOWN, Direction.DOWN);
+        controls.put(S, Direction.DOWN);
+        controls.put(RIGHT, Direction.RIGHT);
+        controls.put(D, Direction.RIGHT);
+        return controls;
+    }
+
+    private void renderGame() {
         levelRenderer.render();
 
-        // start recording all drawing commands
         batch.begin();
 
-        // render player
-        drawTextureRegionUnscaled(batch, playerGraphics, playerRectangle, playerRotation);
+        for (int i = 0; i < tanksGraphics.length; i++) {
+            tanksGraphics[i].draw(batch, gameField.getTanks().get(i));
+        }
+        for (TreeGraphics treeGraphics : treesGraphics) {
+            treeGraphics.draw(batch);
+        }
 
-        // render tree obstacle
-        drawTextureRegionUnscaled(batch, treeObstacleGraphics, treeObstacleRectangle, 0f);
-
-        // submit all drawing requests
         batch.end();
     }
 
@@ -164,8 +193,12 @@ public class GameDesktopLauncher implements ApplicationListener {
     @Override
     public void dispose() {
         // dispose of all the native resources (classes which implement com.badlogic.gdx.utils.Disposable)
-        greenTreeTexture.dispose();
-        blueTankTexture.dispose();
+        for (TreeGraphics treeGraphics : treesGraphics) {
+            treeGraphics.dispose();
+        }
+        for (TankGraphics tankGraphics : tanksGraphics) {
+            tankGraphics.dispose();
+        }
         level.dispose();
         batch.dispose();
     }
@@ -174,6 +207,7 @@ public class GameDesktopLauncher implements ApplicationListener {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
         // level width: 10 tiles x 128px, height: 8 tiles x 128px
         config.setWindowedMode(1280, 1024);
-        new Lwjgl3Application(new GameDesktopLauncher(), config);
+        boolean randomLevel = args.length > 0 && "--random".equals(args[0]);
+        new Lwjgl3Application(new GameDesktopLauncher(randomLevel), config);
     }
 }
