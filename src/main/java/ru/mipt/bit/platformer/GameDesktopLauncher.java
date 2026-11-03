@@ -10,12 +10,12 @@ import com.badlogic.gdx.maps.MapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
+import ru.mipt.bit.platformer.command.Command;
 import ru.mipt.bit.platformer.control.ControlStrategy;
 import ru.mipt.bit.platformer.control.KeyboardControlStrategy;
 import ru.mipt.bit.platformer.control.RandomControlStrategy;
 import ru.mipt.bit.platformer.control.TankController;
-import ru.mipt.bit.platformer.graphics.TankGraphics;
-import ru.mipt.bit.platformer.graphics.TreeGraphics;
+import ru.mipt.bit.platformer.graphics.GameFieldGraphics;
 import ru.mipt.bit.platformer.input.InputHandler;
 import ru.mipt.bit.platformer.level.FileGameFieldLoader;
 import ru.mipt.bit.platformer.level.GameFieldLoader;
@@ -23,13 +23,15 @@ import ru.mipt.bit.platformer.level.RandomGameFieldGenerator;
 import ru.mipt.bit.platformer.level.RandomTankGenerator;
 import ru.mipt.bit.platformer.model.Direction;
 import ru.mipt.bit.platformer.model.GameField;
-import ru.mipt.bit.platformer.model.Movable;
+import ru.mipt.bit.platformer.model.Tank;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static com.badlogic.gdx.Input.Keys.*;
@@ -38,10 +40,6 @@ import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
 public class GameDesktopLauncher implements ApplicationListener {
 
-    private static final String PLAYER_TANK_TEXTURE_PATH = "images/tank_blue.png";
-    private static final String AI_TANK_TEXTURE_PATH = "images/tank_orange.png";
-    private static final String TREE_TEXTURE_PATH = "images/greenTree.png";
-    private static final float TANK_MOVEMENT_SPEED = 0.4f;
     private static final int LEVEL_WIDTH = 10;
     private static final int LEVEL_HEIGHT = 8;
     private static final int RANDOM_TREE_COUNT = 12;
@@ -53,9 +51,9 @@ public class GameDesktopLauncher implements ApplicationListener {
 
     private TiledMap level;
     private MapRenderer levelRenderer;
-    private TankGraphics[] tanksGraphics;
-    private TankController[] tankControllers;
-    private TreeGraphics[] treesGraphics;
+    private GameFieldGraphics fieldGraphics;
+    private ControlStrategy keyboardStrategy;
+    private ControlStrategy randomStrategy;
 
     private GameField gameField;
 
@@ -77,23 +75,10 @@ public class GameDesktopLauncher implements ApplicationListener {
         InputHandler inputHandler = new InputHandler(Gdx.input::isKeyPressed, createControls());
 
         gameField = loadGameField();
+        fieldGraphics = new GameFieldGraphics(gameField, groundLayer);
         new RandomTankGenerator().generate(gameField, AI_TANK_COUNT);
-
-        tanksGraphics = new TankGraphics[gameField.getTanks().size()];
-        tankControllers = new TankController[tanksGraphics.length];
-        for (int i = 0; i < tanksGraphics.length; i++) {
-            Movable tank = gameField.getTanks().get(i);
-            boolean playerControlled = tank == gameField.getTank();
-            String texturePath = playerControlled ? PLAYER_TANK_TEXTURE_PATH : AI_TANK_TEXTURE_PATH;
-            tanksGraphics[i] = new TankGraphics(groundLayer, tank, texturePath, TANK_MOVEMENT_SPEED);
-            ControlStrategy strategy = playerControlled
-                    ? new KeyboardControlStrategy(inputHandler) : new RandomControlStrategy();
-            tankControllers[i] = new TankController(gameField, tank, strategy);
-        }
-        treesGraphics = new TreeGraphics[gameField.getObstacles().length];
-        for (int i = 0; i < gameField.getObstacles().length; i++) {
-            treesGraphics[i] = new TreeGraphics(groundLayer, gameField.getObstacles()[i], TREE_TEXTURE_PATH);
-        }
+        keyboardStrategy = new KeyboardControlStrategy(inputHandler);
+        randomStrategy = new RandomControlStrategy();
     }
 
     private GameField loadGameField() {
@@ -131,20 +116,18 @@ public class GameDesktopLauncher implements ApplicationListener {
     }
 
     private void updateGame(float deltaTime) {
-        for (int i = 0; i < tanksGraphics.length; i++) {
-            tanksGraphics[i].update(deltaTime);
-            Movable tank = gameField.getTanks().get(i);
-            if (gameField.isTankMoving(tank) && !tanksGraphics[i].isMoving()) {
-                gameField.finishTankMove(tank);
+        List<Command> commands = new ArrayList<>();
+        for (Tank tank : gameField.getTanks()) {
+            ControlStrategy strategy = tank == gameField.getTank() ? keyboardStrategy : randomStrategy;
+            Command command = new TankController(gameField, tank, strategy).nextCommand();
+            if (command != null) {
+                commands.add(command);
             }
         }
-        for (int i = 0; i < tankControllers.length; i++) {
-            tankControllers[i].update();
-            Movable tank = gameField.getTanks().get(i);
-            if (gameField.isTankMoving(tank) && !tanksGraphics[i].isMoving()) {
-                tanksGraphics[i].moveTank(tank);
-            }
+        for (Command command : commands) {
+            command.execute();
         }
+        gameField.live(deltaTime);
     }
 
     private Map<Integer, Direction> createControls() {
@@ -165,12 +148,7 @@ public class GameDesktopLauncher implements ApplicationListener {
 
         batch.begin();
 
-        for (int i = 0; i < tanksGraphics.length; i++) {
-            tanksGraphics[i].draw(batch, gameField.getTanks().get(i));
-        }
-        for (TreeGraphics treeGraphics : treesGraphics) {
-            treeGraphics.draw(batch);
-        }
+        fieldGraphics.draw(batch);
 
         batch.end();
     }
@@ -193,12 +171,8 @@ public class GameDesktopLauncher implements ApplicationListener {
     @Override
     public void dispose() {
         // dispose of all the native resources (classes which implement com.badlogic.gdx.utils.Disposable)
-        for (TreeGraphics treeGraphics : treesGraphics) {
-            treeGraphics.dispose();
-        }
-        for (TankGraphics tankGraphics : tanksGraphics) {
-            tankGraphics.dispose();
-        }
+        fieldGraphics.dispose();
+        ((com.badlogic.gdx.utils.Disposable) levelRenderer).dispose();
         level.dispose();
         batch.dispose();
     }

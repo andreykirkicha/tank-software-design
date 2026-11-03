@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.IntPredicate;
 
+import static com.badlogic.gdx.Input.Keys.SPACE;
+
 public class InputHandler {
     private final IntPredicate isKeyPressed;
     private final Map<Integer, Direction> controls;
@@ -22,5 +24,9 @@ public class InputHandler {
             }
         }
         return null;
+    }
+
+    public boolean isShootPressed() {
+        return isKeyPressed.test(SPACE);
     }
 }

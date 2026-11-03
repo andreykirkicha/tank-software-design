@@ -17,6 +17,8 @@ public class MoveCommand implements Command {
 
     @Override
     public void execute() {
-        field.moveTank(tank, direction);
+        if (field.contains(tank)) {
+            field.moveTank(tank, direction);
+        }
     }
 }
