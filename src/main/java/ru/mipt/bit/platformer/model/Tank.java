@@ -10,6 +10,7 @@ public class Tank implements Movable {
     private int y;
     private Direction direction;
     private int health;
+    private final int maxHealth;
     private final int bulletDamage;
     private float shotCooldown;
 
@@ -25,11 +26,16 @@ public class Tank implements Movable {
         this.y = y;
         this.direction = direction;
         this.health = health;
+        this.maxHealth = health;
         this.bulletDamage = bulletDamage;
     }
 
     public int getHealth() {
         return health;
+    }
+
+    public int getMaxHealth() {
+        return maxHealth;
     }
 
     public boolean isReady() {

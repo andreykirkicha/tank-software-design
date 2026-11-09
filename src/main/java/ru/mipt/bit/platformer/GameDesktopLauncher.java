@@ -11,6 +11,7 @@ import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
 import ru.mipt.bit.platformer.command.Command;
+import ru.mipt.bit.platformer.command.ToggleHealthBarsCommand;
 import ru.mipt.bit.platformer.control.ControlStrategy;
 import ru.mipt.bit.platformer.control.KeyboardControlStrategy;
 import ru.mipt.bit.platformer.control.RandomControlStrategy;
@@ -52,6 +53,7 @@ public class GameDesktopLauncher implements ApplicationListener {
     private TiledMap level;
     private MapRenderer levelRenderer;
     private GameFieldGraphics fieldGraphics;
+    private InputHandler inputHandler;
     private ControlStrategy keyboardStrategy;
     private ControlStrategy randomStrategy;
 
@@ -72,7 +74,7 @@ public class GameDesktopLauncher implements ApplicationListener {
         level = new TmxMapLoader().load("level.tmx");
         levelRenderer = createSingleLayerMapRenderer(level, batch);
         TiledMapTileLayer groundLayer = getSingleLayer(level);
-        InputHandler inputHandler = new InputHandler(Gdx.input::isKeyPressed, createControls());
+        inputHandler = new InputHandler(Gdx.input::isKeyPressed, createControls());
 
         gameField = loadGameField();
         fieldGraphics = new GameFieldGraphics(gameField, groundLayer);
@@ -117,6 +119,9 @@ public class GameDesktopLauncher implements ApplicationListener {
 
     private void updateGame(float deltaTime) {
         List<Command> commands = new ArrayList<>();
+        if (inputHandler.isHealthBarToggleJustPressed()) {
+            commands.add(new ToggleHealthBarsCommand(fieldGraphics));
+        }
         for (Tank tank : gameField.getTanks()) {
             ControlStrategy strategy = tank == gameField.getTank() ? keyboardStrategy : randomStrategy;
             Command command = new TankController(gameField, tank, strategy).nextCommand();

@@ -18,9 +18,12 @@ public class GameFieldGraphics implements GameFieldListener, Disposable {
     private final GameField field;
     private final Function<GameObject, ObjectGraphics> factory;
     private final Map<GameObject, ObjectGraphics> graphics = new LinkedHashMap<>();
+    private boolean healthBarsVisible;
 
     public GameFieldGraphics(GameField field, TiledMapTileLayer tileLayer) {
-        this(field, object -> createGraphics(field, tileLayer, object));
+        this.field = field;
+        this.factory = object -> createGraphics(tileLayer, object);
+        field.addListener(this);
     }
 
     public GameFieldGraphics(GameField field, Function<GameObject, ObjectGraphics> factory) {
@@ -29,10 +32,15 @@ public class GameFieldGraphics implements GameFieldListener, Disposable {
         field.addListener(this);
     }
 
-    private static ObjectGraphics createGraphics(GameField field, TiledMapTileLayer tileLayer, GameObject object) {
+    private ObjectGraphics createGraphics(TiledMapTileLayer tileLayer, GameObject object) {
         if (object instanceof Tank) {
             String texturePath = object == field.getTank() ? "images/tank_blue.png" : "images/tank_orange.png";
-            return new TankGraphics(tileLayer, field, (Tank) object, texturePath);
+            Tank tank = (Tank) object;
+            return new HealthBarGraphicsDecorator(
+                    new TankGraphics(tileLayer, field, tank, texturePath),
+                    new HealthBarGraphics(tileLayer, field, tank),
+                    this::isHealthBarsVisible
+            );
         }
         if (object instanceof Obstacle) {
             return new TreeGraphics(tileLayer, (Obstacle) object, "images/greenTree.png");
@@ -41,6 +49,14 @@ public class GameFieldGraphics implements GameFieldListener, Disposable {
             return new BulletGraphics(tileLayer, (Bullet) object);
         }
         throw new IllegalArgumentException("Unknown game object: " + object.getClass().getName());
+    }
+
+    public boolean isHealthBarsVisible() {
+        return healthBarsVisible;
+    }
+
+    public void toggleHealthBars() {
+        healthBarsVisible = !healthBarsVisible;
     }
 
     @Override
