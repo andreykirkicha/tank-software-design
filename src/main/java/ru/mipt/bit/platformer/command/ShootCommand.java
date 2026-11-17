@@ -3,6 +3,9 @@ package ru.mipt.bit.platformer.command;
 import ru.mipt.bit.platformer.model.GameField;
 import ru.mipt.bit.platformer.model.Tank;
 
+/**
+ * Application: use case выстрела; правила стрельбы принадлежат домену.
+ */
 public class ShootCommand implements Command {
     private final GameField field;
     private final Tank tank;

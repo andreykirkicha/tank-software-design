@@ -9,6 +9,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Application: сервис заполнения свободных клеток дополнительными танками.
+ * Использует доменную проверку занятости и внедряемый генератор случайных чисел.
+ */
 public class RandomTankGenerator {
     private final Random random;
 

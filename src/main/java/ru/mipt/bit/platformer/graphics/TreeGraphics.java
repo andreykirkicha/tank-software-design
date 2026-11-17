@@ -12,6 +12,9 @@ import static ru.mipt.bit.platformer.util.GdxGameUtils.createBoundingRectangle;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.drawTextureRegionUnscaled;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.moveRectangleAtTileCenter;
 
+/**
+ * Infrastructure: графический адаптер препятствия для LibGDX.
+ */
 public class TreeGraphics implements ObjectGraphics {
     private final Texture texture;
     private final TextureRegion region;

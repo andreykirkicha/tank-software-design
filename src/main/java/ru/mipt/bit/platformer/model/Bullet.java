@@ -1,5 +1,8 @@
 package ru.mipt.bit.platformer.model;
 
+/**
+ * Domain: сущность пули; хранит урон, направление и правила полёта.
+ */
 public class Bullet implements GameObject {
     public static final float STEP_DURATION = 0.1f;
 

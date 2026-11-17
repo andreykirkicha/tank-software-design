@@ -13,6 +13,9 @@ import ru.mipt.bit.platformer.util.TileMovement;
 
 import static com.badlogic.gdx.math.MathUtils.clamp;
 
+/**
+ * Infrastructure: графический адаптер здоровья танка для LibGDX.
+ */
 public class HealthBarGraphics implements ObjectGraphics {
     private static final float BORDER = 2f;
 

@@ -4,6 +4,10 @@ import ru.mipt.bit.platformer.command.Command;
 import ru.mipt.bit.platformer.model.GameField;
 import ru.mipt.bit.platformer.model.Tank;
 
+/**
+ * Application: сервис запроса команды только для живого и свободного танка.
+ * Зависит от домена и порта ControlStrategy, а не от устройства ввода.
+ */
 public class TankController {
     private final GameField field;
     private final Tank tank;

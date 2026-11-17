@@ -14,6 +14,9 @@ import ru.mipt.bit.platformer.util.TileMovement;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.createBoundingRectangle;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.drawTextureRegionUnscaled;
 
+/**
+ * Infrastructure: графический адаптер танка; читает прогресс движения из домена.
+ */
 public class TankGraphics implements ObjectGraphics {
     private final GameField field;
     private final Movable tank;

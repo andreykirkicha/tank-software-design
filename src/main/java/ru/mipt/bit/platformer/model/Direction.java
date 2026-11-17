@@ -1,5 +1,8 @@
 package ru.mipt.bit.platformer.model;
 
+/**
+ * Domain: value object направления и смещения на игровом поле.
+ */
 public enum Direction {
     UP(0, 1, 90f),
     DOWN(0, -1, -90f),

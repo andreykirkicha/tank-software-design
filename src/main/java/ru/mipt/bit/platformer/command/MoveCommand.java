@@ -4,6 +4,9 @@ import ru.mipt.bit.platformer.model.Direction;
 import ru.mipt.bit.platformer.model.GameField;
 import ru.mipt.bit.platformer.model.Movable;
 
+/**
+ * Application: use case перемещения танка с проверками доменного агрегата.
+ */
 public class MoveCommand implements Command {
     private final GameField field;
     private final Movable tank;
