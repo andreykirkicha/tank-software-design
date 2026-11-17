@@ -7,6 +7,10 @@ import com.badlogic.gdx.math.Rectangle;
 
 import static ru.mipt.bit.platformer.util.GdxGameUtils.moveRectangleAtTileCenter;
 
+/**
+ * Infrastructure: визуальная интерполяция между клетками LibGDX.
+ * Не определяет скорость танка: прогресс движения приходит из домена.
+ */
 public class TileMovement {
 
     private final TiledMapTileLayer tileLayer;

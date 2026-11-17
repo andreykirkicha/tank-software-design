@@ -1,5 +1,8 @@
 package ru.mipt.bit.platformer.model;
 
+/**
+ * Domain: сущность неподвижного препятствия.
+ */
 public class Tree implements Obstacle {
     private final int x;
     private final int y;

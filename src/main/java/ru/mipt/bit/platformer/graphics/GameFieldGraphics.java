@@ -3,6 +3,7 @@ package ru.mipt.bit.platformer.graphics;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.utils.Disposable;
+import ru.mipt.bit.platformer.application.HealthBarVisibility;
 import ru.mipt.bit.platformer.model.Bullet;
 import ru.mipt.bit.platformer.model.GameField;
 import ru.mipt.bit.platformer.model.GameFieldListener;
@@ -14,7 +15,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-public class GameFieldGraphics implements GameFieldListener, Disposable {
+/**
+ * Infrastructure: выходной адаптер портов GameFieldListener и HealthBarVisibility.
+ * Преобразует события домена в графику LibGDX и управляет её ресурсами.
+ */
+public class GameFieldGraphics implements GameFieldListener, HealthBarVisibility, Disposable {
     private final GameField field;
     private final Function<GameObject, ObjectGraphics> factory;
     private final Map<GameObject, ObjectGraphics> graphics = new LinkedHashMap<>();
@@ -55,6 +60,7 @@ public class GameFieldGraphics implements GameFieldListener, Disposable {
         return healthBarsVisible;
     }
 
+    @Override
     public void toggleHealthBars() {
         healthBarsVisible = !healthBarsVisible;
     }

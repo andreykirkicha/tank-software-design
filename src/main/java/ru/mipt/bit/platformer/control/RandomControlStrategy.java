@@ -9,6 +9,9 @@ import ru.mipt.bit.platformer.model.Tank;
 
 import java.util.Random;
 
+/**
+ * Infrastructure: адаптер порта ControlStrategy, получающий действия из Random.
+ */
 public class RandomControlStrategy implements ControlStrategy {
     private final Random random;
 

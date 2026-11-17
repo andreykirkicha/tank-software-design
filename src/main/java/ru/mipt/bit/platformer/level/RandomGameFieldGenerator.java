@@ -11,6 +11,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Infrastructure: адаптер порта GameFieldLoader для процедурного уровня.
+ * Использует внедряемый Random вместо файлового источника.
+ */
 public class RandomGameFieldGenerator implements GameFieldLoader {
     private final int width;
     private final int height;

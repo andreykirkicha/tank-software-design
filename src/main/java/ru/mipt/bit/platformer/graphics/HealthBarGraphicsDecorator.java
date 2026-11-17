@@ -4,6 +4,9 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 
 import java.util.function.BooleanSupplier;
 
+/**
+ * Infrastructure: декоратор графического адаптера, добавляющий полоску здоровья.
+ */
 public class HealthBarGraphicsDecorator implements ObjectGraphics {
     private final ObjectGraphics wrapped;
     private final ObjectGraphics healthBar;

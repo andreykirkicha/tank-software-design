@@ -14,6 +14,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Infrastructure: файловый адаптер выходного порта GameFieldLoader.
+ * Читает текстовую карту через Reader или Path и создаёт доменные объекты.
+ */
 public class FileGameFieldLoader implements GameFieldLoader {
     private static final char TREE = 'T';
     private static final char TANK = 'X';

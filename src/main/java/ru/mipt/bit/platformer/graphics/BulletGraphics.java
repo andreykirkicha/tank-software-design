@@ -13,6 +13,9 @@ import static ru.mipt.bit.platformer.util.GdxGameUtils.createBoundingRectangle;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.drawTextureRegionUnscaled;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.moveRectangleAtTileCenter;
 
+/**
+ * Infrastructure: графический адаптер сущности Bullet для LibGDX.
+ */
 public class BulletGraphics implements ObjectGraphics {
     private final TiledMapTileLayer tileLayer;
     private final Bullet bullet;

@@ -6,6 +6,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Domain: агрегат игрового поля; управляет объектами, движением и столкновениями.
+ * Публикует события через выходной порт GameFieldListener без зависимости от UI.
+ */
 public class GameField {
     private final int width;
     private final int height;
@@ -15,7 +19,7 @@ public class GameField {
     private final List<GameObject> objects = new ArrayList<>();
     private final List<GameFieldListener> listeners = new ArrayList<>();
     private final Map<Movable, int[]> movementOrigins = new HashMap<>();
-    private final Map<Movable, Float> movementElapsed = new HashMap<>();
+    private final Map<Movable, Float> movementProgress = new HashMap<>();
 
     public GameField(int width, int height, Tank tank, Obstacle[] obstacles) {
         this.width = width;
@@ -92,7 +96,7 @@ public class GameField {
         tanks.remove(object);
         obstacles.remove(object);
         movementOrigins.remove(object);
-        movementElapsed.remove(object);
+        movementProgress.remove(object);
         for (GameFieldListener listener : new ArrayList<>(listeners)) {
             listener.objectRemoved(object);
         }
@@ -167,7 +171,7 @@ public class GameField {
 
         // The destination is stored in the tank; keep its origin occupied until arrival.
         movementOrigins.put(tank, new int[]{tank.getX(), tank.getY()});
-        movementElapsed.put(tank, 0f);
+        movementProgress.put(tank, 0f);
         tank.move();
         for (GameObject object : new ArrayList<>(objects)) {
             if (object instanceof Bullet) {
@@ -184,21 +188,22 @@ public class GameField {
     public void finishTankMove(Movable tank) {
         requireTank(tank);
         movementOrigins.remove(tank);
-        movementElapsed.remove(tank);
+        movementProgress.remove(tank);
     }
 
     public void advanceTankMove(Tank tank, float tick) {
         if (isTankMoving(tank)) {
-            float elapsed = movementElapsed.get(tank) + tick;
-            movementElapsed.put(tank, elapsed);
-            if (elapsed + 0.000001f >= Tank.MOVEMENT_DURATION) {
+            // Store distance, not time: a state change preserves the travelled part of the tile.
+            float progress = movementProgress.get(tank) + tick / tank.getMovementDuration();
+            movementProgress.put(tank, progress);
+            if (progress + 0.000001f >= 1f) {
                 finishTankMove(tank);
             }
         }
     }
 
     public float getTankMovementProgress(Movable tank) {
-        return isTankMoving(tank) ? movementElapsed.get(tank) / Tank.MOVEMENT_DURATION : 1f;
+        return isTankMoving(tank) ? Math.min(1f, movementProgress.get(tank)) : 1f;
     }
 
     public int getTankOriginX(Movable tank) {

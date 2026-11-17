@@ -10,12 +10,10 @@ import com.badlogic.gdx.maps.MapRenderer;
 import com.badlogic.gdx.maps.tiled.TiledMap;
 import com.badlogic.gdx.maps.tiled.TiledMapTileLayer;
 import com.badlogic.gdx.maps.tiled.TmxMapLoader;
-import ru.mipt.bit.platformer.command.Command;
-import ru.mipt.bit.platformer.command.ToggleHealthBarsCommand;
-import ru.mipt.bit.platformer.control.ControlStrategy;
+import ru.mipt.bit.platformer.application.GameLoop;
+import ru.mipt.bit.platformer.application.GameSession;
 import ru.mipt.bit.platformer.control.KeyboardControlStrategy;
 import ru.mipt.bit.platformer.control.RandomControlStrategy;
-import ru.mipt.bit.platformer.control.TankController;
 import ru.mipt.bit.platformer.graphics.GameFieldGraphics;
 import ru.mipt.bit.platformer.input.InputHandler;
 import ru.mipt.bit.platformer.level.FileGameFieldLoader;
@@ -24,21 +22,22 @@ import ru.mipt.bit.platformer.level.RandomGameFieldGenerator;
 import ru.mipt.bit.platformer.level.RandomTankGenerator;
 import ru.mipt.bit.platformer.model.Direction;
 import ru.mipt.bit.platformer.model.GameField;
-import ru.mipt.bit.platformer.model.Tank;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static com.badlogic.gdx.Input.Keys.*;
 import static com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT;
 import static ru.mipt.bit.platformer.util.GdxGameUtils.*;
 
+/**
+ * Infrastructure: входной адаптер LibGDX и composition root.
+ * Создаёт домен, use case и адаптеры; передаёт кадры во входной порт GameSession.
+ */
 public class GameDesktopLauncher implements ApplicationListener {
 
     private static final int LEVEL_WIDTH = 10;
@@ -53,11 +52,7 @@ public class GameDesktopLauncher implements ApplicationListener {
     private TiledMap level;
     private MapRenderer levelRenderer;
     private GameFieldGraphics fieldGraphics;
-    private InputHandler inputHandler;
-    private ControlStrategy keyboardStrategy;
-    private ControlStrategy randomStrategy;
-
-    private GameField gameField;
+    private GameSession gameSession;
 
     public GameDesktopLauncher() {
         this(false);
@@ -74,13 +69,13 @@ public class GameDesktopLauncher implements ApplicationListener {
         level = new TmxMapLoader().load("level.tmx");
         levelRenderer = createSingleLayerMapRenderer(level, batch);
         TiledMapTileLayer groundLayer = getSingleLayer(level);
-        inputHandler = new InputHandler(Gdx.input::isKeyPressed, createControls());
+        InputHandler inputHandler = new InputHandler(Gdx.input::isKeyPressed, createControls());
 
-        gameField = loadGameField();
+        GameField gameField = loadGameField();
         fieldGraphics = new GameFieldGraphics(gameField, groundLayer);
         new RandomTankGenerator().generate(gameField, AI_TANK_COUNT);
-        keyboardStrategy = new KeyboardControlStrategy(inputHandler);
-        randomStrategy = new RandomControlStrategy();
+        gameSession = new GameLoop(gameField, inputHandler,
+                new KeyboardControlStrategy(inputHandler), new RandomControlStrategy(), fieldGraphics);
     }
 
     private GameField loadGameField() {
@@ -108,31 +103,13 @@ public class GameDesktopLauncher implements ApplicationListener {
 
         float deltaTime = Gdx.graphics.getDeltaTime();
 
-        updateGame(deltaTime);
+        gameSession.update(deltaTime);
         renderGame();
     }
 
     private void clearScreen() {
         Gdx.gl.glClearColor(0f, 0f, 0.2f, 1f);
         Gdx.gl.glClear(GL_COLOR_BUFFER_BIT);
-    }
-
-    private void updateGame(float deltaTime) {
-        List<Command> commands = new ArrayList<>();
-        if (inputHandler.isHealthBarToggleJustPressed()) {
-            commands.add(new ToggleHealthBarsCommand(fieldGraphics));
-        }
-        for (Tank tank : gameField.getTanks()) {
-            ControlStrategy strategy = tank == gameField.getTank() ? keyboardStrategy : randomStrategy;
-            Command command = new TankController(gameField, tank, strategy).nextCommand();
-            if (command != null) {
-                commands.add(command);
-            }
-        }
-        for (Command command : commands) {
-            command.execute();
-        }
-        gameField.live(deltaTime);
     }
 
     private Map<Integer, Direction> createControls() {
